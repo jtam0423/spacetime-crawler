@@ -83,7 +83,7 @@ def extract_next_links(rawDataObj):
     '''
     
     try:
-        page = urllib2.urlopen(rawDataObj.url).read()
+        page = urllib2.urlopen(rawDataObj.url.encode('utf-8')).read()
     except urllib2.URLError:
         print "Invalid URL"
     else:
@@ -95,15 +95,13 @@ def extract_next_links(rawDataObj):
                 parsed = urlparse(l[2])
 
 
-                if parsed.scheme == 'http' and 'ics.uci.edu' in parsed.netloc:
-                    if parsed.netloc not in SUBDOMAINS:
-                        SUBDOMAINS[parsed.netloc] = 1
-                    else:
-                        SUBDOMAINS[parsed.netloc] = SUBDOMAINS[parsed.netloc] + 1
-                    outputLinks.append(l[2])
+#                if parsed.scheme == 'http' and 'ics.uci.edu' in parsed.netloc:
+#                    if parsed.netloc not in SUBDOMAINS:
+#                        SUBDOMAINS[parsed.netloc] = 1
+#                    else:
+#                        SUBDOMAINS[parsed.netloc] = SUBDOMAINS[parsed.netloc] + 1
+#                    outputLinks.append(l[2])
 
-
-        
     return outputLinks
 
 
@@ -118,13 +116,14 @@ def is_valid(url):
     if parsed.scheme not in set(["http", "https"]):
         return False
     
+    print(parsed)
+    
+    #calendar killer
     if "calendar.ics.uci.edu" in parsed.hostname:
         return False
     
-    if len(url) > 300:
-        return False
-    
-    if re.match("^.*?(/.+?/?).*?\1.*$|^.*?/(.+?/?)\2.*$", parsed.path.lower()):
+    #if exceeds 350 in length
+    if len(url) > 350:
         return False
     
     
