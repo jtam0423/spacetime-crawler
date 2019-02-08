@@ -63,7 +63,7 @@ def increaseCount():
     global COUNT
     COUNT = COUNT + 1
     print COUNT
-    if COUNT >= 3000:
+    if COUNT >= 500:
         sys.exit()
     
 def extract_next_links(rawDataObj):
@@ -83,23 +83,26 @@ def extract_next_links(rawDataObj):
     '''
     
     try:
-        content = html.document_fromstring(rawDataObj.content)
-        
-        content.make_links_absolute(rawDataObj.url)
-        
-        for l in content.iterlinks():
-            parsed = urlparse(l[2])
-            
-            
-            if parsed.scheme == 'http' and 'ics.uci.edu' in parsed.netloc:
-                if parsed.netloc not in SUBDOMAINS:
-                    SUBDOMAINS[parsed.netloc] = 1
-                else:
-                    SUBDOMAINS[parsed.netloc] = SUBDOMAINS[parsed.netloc] + 1
-                outputLinks.append(l[2])
-                    
-    except:
-        print "Link Finished"
+        page = urllib2.urlopen(rawDataObj.url).read()
+    except urllib2.URLError:
+        print "Invalid URL"
+    else:
+        if int(rawDataObj.http_code) < 400:
+            content = html.fromstring(page)
+            content.make_links_absolute(rawDataObj.url)
+
+            for l in content.iterlinks():
+                parsed = urlparse(l[2])
+
+
+                if parsed.scheme == 'http' and 'ics.uci.edu' in parsed.netloc:
+                    if parsed.netloc not in SUBDOMAINS:
+                        SUBDOMAINS[parsed.netloc] = 1
+                    else:
+                        SUBDOMAINS[parsed.netloc] = SUBDOMAINS[parsed.netloc] + 1
+                    outputLinks.append(l[2])
+
+
         
     return outputLinks
 
@@ -120,6 +123,13 @@ def is_valid(url):
     
     if len(url) > 300:
         return False
+    
+    if re.match("^.*?(/.+?/?).*?\1.*$|^.*?/(.+?/?)\2.*$", parsed.path.lower()):
+        return False
+    
+    
+    
+    
     
     try:
         return ".ics.uci.edu" in parsed.hostname \
