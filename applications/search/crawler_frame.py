@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 LOG_HEADER = "[CRAWLER]"
 
 SUBDOMAINS = {}
+MOST_COUNT = 0
+MOST_URL = ""
+
 COUNT = 0
 
 @Producer(JasonhtTychuaLink)
@@ -83,26 +86,53 @@ def extract_next_links(rawDataObj):
     '''
     
     try:
-        page = urllib2.urlopen(rawDataObj.url.encode('utf-8')).read()
-    except urllib2.URLError:
-        print "Invalid URL"
-    else:
-        if int(rawDataObj.http_code) < 400:
-            content = html.fromstring(page)
-            content.make_links_absolute(rawDataObj.url)
+        content = rawDataObj.content
+        element = html.fromstring(content)
+        out = html.fromstring(html.tostring(element))
 
-            for l in content.iterlinks():
-                parsed = urlparse(l[2])
-
-
-#                if parsed.scheme == 'http' and 'ics.uci.edu' in parsed.netloc:
-#                    if parsed.netloc not in SUBDOMAINS:
-#                        SUBDOMAINS[parsed.netloc] = 1
-#                    else:
-#                        SUBDOMAINS[parsed.netloc] = SUBDOMAINS[parsed.netloc] + 1
-#                    outputLinks.append(l[2])
+        l_count = 0
+        for l in out.iterlinks():
+            parsed = urlparse(l[2])
+            if parsed.scheme == 'http' and 'ics.uci.edu' in parsed.netloc:
+                if parsed.netloc not in SUBDOMAINS:
+                    SUBDOMAINS[parsed.netloc] = 1
+                else:
+                    SUBDOMAINS[parsed.netloc] = SUBDOMAINS[parsed.netloc] + 1
+            outputLinks.append(l[2])
+            l_count = l_count + 1
+            write_outfile()
+        
+        if (l_count > MAX_COUNT):
+            MAX_COUNT = l_count
+            MAX_URL = rawDataObj.url
+            
+    except:
+        print("Finished")
 
     return outputLinks
+    
+#    try:
+#        page = urllib2.urlopen(rawDataObj.url.encode('utf-8')).read()
+#    except urllib2.URLError:
+#        print "Invalid URL"
+#    else:
+#        if int(rawDataObj.http_code) < 400:
+#            content = html.fromstring(page)
+#            content.make_links_absolute(rawDataObj.url)
+#
+#            for l in content.iterlinks():
+#                parsed = urlparse(l[2])
+#                outputLinks.append(l[2])
+#
+#
+##                if parsed.scheme == 'http' and 'ics.uci.edu' in parsed.netloc:
+##                    if parsed.netloc not in SUBDOMAINS:
+##                        SUBDOMAINS[parsed.netloc] = 1
+##                    else:
+##                        SUBDOMAINS[parsed.netloc] = SUBDOMAINS[parsed.netloc] + 1
+##                    outputLinks.append(l[2])
+#
+#    return outputLinks
 
 
 def is_valid(url):
@@ -116,19 +146,34 @@ def is_valid(url):
     if parsed.scheme not in set(["http", "https"]):
         return False
     
-    print(parsed)
-    
     #calendar killer
-    if "calendar.ics.uci.edu" in parsed.hostname:
+    if "calendar" in parsed.geturl():
         return False
     
     #if exceeds 350 in length
     if len(url) > 350:
         return False
     
+    #check if absolute
+    if not is_absolute:
+        print (url, ": Absolute URL Error")
+        return False
     
+    if "events" in url:
+        return False
     
+#    #syntax
+#    if "?" in url and "=" in url:
+#        print (url, ": Query Parameter Error")
+#        return False
     
+#    #handle multiple paths
+#    paths = parsed.path
+#    
+#    paths_list = paths.split("/")
+#    
+#    if len(paths_list) > 10:
+#        print(url, ": Multiple Paths Error")
     
     try:
         return ".ics.uci.edu" in parsed.hostname \
@@ -142,3 +187,11 @@ def is_valid(url):
         print ("TypeError for ", parsed)
         return False
 
+def is_absolute(url):
+    return bool(urlparse.urlparse(url).netloc)
+
+def write_outfile():
+    outfile = open("analysis.txt", 'w')
+    outfile.write('Subdomains: ' + str(SUBDOMAINS))
+    outfile.write("Max Outlink Count: " + str(MOST_COUNT))
+    outfile.write("Max Outlink URL: " + MOST_URL)
