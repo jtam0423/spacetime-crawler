@@ -17,9 +17,8 @@ logger = logging.getLogger(__name__)
 LOG_HEADER = "[CRAWLER]"
 
 SUBDOMAINS = {}
-MOST_COUNT = 0
-MOST_URL = ""
-
+MAX_COUNT = 0
+MAX_URL = ""
 COUNT = 0
 
 @Producer(JasonhtTychuaLink)
@@ -66,12 +65,11 @@ def increaseCount():
     global COUNT
     COUNT = COUNT + 1
     print COUNT
-    if COUNT >= 500:
-        sys.exit()
     
 def extract_next_links(rawDataObj):
     global SUBDOMAINS
-    global COUNT
+    global MAX_COUNT
+    global MAX_URL
     
     outputLinks = []
     '''
@@ -107,7 +105,7 @@ def extract_next_links(rawDataObj):
             MAX_URL = rawDataObj.url
             
     except:
-        print("Finished")
+        pass
 
     return outputLinks
     
@@ -147,19 +145,22 @@ def is_valid(url):
         return False
     
     #calendar killer
-    if "calendar" in parsed.geturl():
+    if "calendar" in url.lower():
+        print ("calendar")
         return False
     
     #if exceeds 350 in length
     if len(url) > 350:
+        print ("length")
         return False
     
     #check if absolute
-    if not is_absolute:
+    if not is_absolute(url):
         print (url, ": Absolute URL Error")
         return False
     
     if "events" in url:
+        print("events")
         return False
     
 #    #syntax
@@ -174,6 +175,13 @@ def is_valid(url):
 #    
 #    if len(paths_list) > 10:
 #        print(url, ": Multiple Paths Error")
+
+    list_paths = parsed.path.split('/')
+    for item in list_paths:
+        if item != '' and list_paths.count(item) > 1:
+            print ("Multiple Path Error")
+            return False
+
     
     try:
         return ".ics.uci.edu" in parsed.hostname \
@@ -188,10 +196,10 @@ def is_valid(url):
         return False
 
 def is_absolute(url):
-    return bool(urlparse.urlparse(url).netloc)
+    return bool(urlparse(url).netloc)
 
 def write_outfile():
     outfile = open("analysis.txt", 'w')
     outfile.write('Subdomains: ' + str(SUBDOMAINS))
-    outfile.write("Max Outlink Count: " + str(MOST_COUNT))
-    outfile.write("Max Outlink URL: " + MOST_URL)
+    outfile.write("\nMax Outlink Count: " + str(MAX_COUNT))
+    outfile.write("\nMax Outlink URL: " + MAX_URL)
